@@ -1,6 +1,6 @@
 <?php
 require '../db/index.php';
-$get_all_list = "SELECT id, description, isDone, ItemPosition, color FROM list";
+$get_all_list = "SELECT id, description, isDone, ItemPosition, color FROM list ORDER by ItemPosition";
 $get = $conn->query($get_all_list);
 if ($get) {
     $data = [];
