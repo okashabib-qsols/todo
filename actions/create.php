@@ -8,7 +8,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         echo json_encode(['message' => 'Please write description', 'success' => false]);
         return;
     }
-    $query_insert = "INSERT INTO list (description, isDone, ItemPosition, color) VALUES ('$description', 0, 12, 1 )";
+    $item_position = $conn->query('SELECT MAX(ItemPosition) as maxPosition FROM list');
+    $row = $item_position->fetch_assoc();
+    $newPosition = ($row['maxPosition']) ? $row['maxPosition'] + 1 : 1;
+
+    $query_insert = "INSERT INTO list (description, isDone, ItemPosition, color) VALUES ('$description', 0, $newPosition, 1 )";
     $insert = $conn->query($query_insert);
     if ($insert) {
         $data = [

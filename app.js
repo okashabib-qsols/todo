@@ -1,38 +1,60 @@
 $(document).ready(function () {
+    $('#loader').show()
 
+    // getting all data of the todo list
     $.ajax({
         method: 'GET',
         url: './actions/all.php',
         dataType: 'json',
         success: (res) => {
+            $('#loader').hide()
             console.log(res)
-            res.data.map((item, ind) => {
-                let crossOutImg = ""
-                if (item.isDone == 1) {
-                    crossOutImg = '<img src="/images/crossout.png" class="crossout" style="width: 100%; display: block;" />'
-                }
+            if (res.success) {
+                res.data.map((item, ind) => {
+                    let crossOutImg = ""
+                    if (item.isDone == 1) {
+                        crossOutImg = '<img src="/images/crossout.png" class="crossout" style="width: 100%; display: block;" />'
+                    }
+                    $('#list').append(
+                        `
+                            <li color=${item.color} class="${item.color == 1 ? 'colorBlue' : item.color} list" rel=${ind} id=${item.id} style="${item.isDone == 1 ? "opacity: 0.5;" : ""}">
+                                <span id="${item.id}listitem" title="Double-click to edit..." style="background-color: ${item.color != 1 ? item.color : ""}">${item.description} ${crossOutImg}</span>
+                                <div class="draggertab tab"></div>
+                                <div class="colortab tab"></div>
+                                <div class="deletetab tab" title="Double click to delete"></div>
+                                <div class="donetab tab"></div>
+                            </li>
+                        `
+                    )
+                })
+            } else if (!res.success) {
+                // Showing message if not success
                 $('#list').append(
                     `
-                        <li color=${item.color} class="${item.color == 1 ? 'colorBlue' : item.color} list" rel=${ind} id=${item.id} style="${item.isDone == 1 ? "opacity: 0.5;" : ""}" draggable="true">
-                            <span id="${item.id}listitem" title="Double-click to edit..." style="background-color: ${item.color != 1 ? item.color : ""}">${item.description} ${crossOutImg}</span>
-                            <div class="draggertab tab"></div>
-                            <div class="colortab tab"></div>
-                            <div class="deletetab tab" title="Double click to delete"></div>
-                            <div class="donetab tab"></div>
-                        </li>
+                        <li class="colorRed list">${res.message}</li>
                     `
                 )
-            })
+            }
         },
         error: function (err) {
             console.log(err)
         }
     })
 
+    $("#list").sortable({
+        axis: 'y',
+        update: function (e, ui) {
+
+            var data = $(this).sortable('serialize');
+            console.log("Serialized Data: ", data);
+        }
+    });
+
+    // Adding new todo
     $('#add-new').submit(function (e) {
         e.preventDefault()
+        $('#add-new-submit').attr('disabled', true).html($('#loader').show())
         let formData = $(this).serialize();
-
         $.ajax({
             method: "POST",
             url: "./actions/create.php",
@@ -57,7 +79,7 @@ $(document).ready(function () {
                     let rel = $('#list .list').length
                     $('#list').append(
                         `
-                        <li color="1" class="colorBlue list" rel=${rel} id=${response.data.id} draggable="true">
+                        <li color="1" class="colorBlue list" rel=${rel} id=${response.data.id}>
                             <span id="${response.data.id}listitem" title="Double-click to edit...">${response.data.description}</span>
                             <div class="draggertab tab"></div>
                             <div class="colortab tab"></div>
@@ -68,6 +90,7 @@ $(document).ready(function () {
                     )
 
                     $('#add-new')[0].reset()
+                    $('#add-new-submit').attr('disabled', false).html('Add')
                 } else if (!response.success) {
                     Toastify({
                         text: response.message,
@@ -82,7 +105,25 @@ $(document).ready(function () {
                             y: 30
                         },
                     }).showToast();
+                    $('#add-new-submit').attr('disabled', false).html('Add')
                 }
+            },
+            error: function (xhr, status, err) {
+                console.error(status, err)
+
+                Toastify({
+                    text: "Error while adding",
+                    duration: 3000,
+                    stopOnFocus: true,
+                    position: "center",
+                    style: {
+                        background: "red",
+                        borderRadius: "10px",
+                    },
+                    offset: {
+                        y: 30
+                    },
+                }).showToast();
             }
         });
     })
@@ -105,6 +146,7 @@ $(document).ready(function () {
         let list = $(this).closest('.list');
         let span = list.find('span')
         let rowId = list.attr('id')
+        if (!rowId) return
         if (span.find('img').length > 0) {
             return;
         }
@@ -118,14 +160,46 @@ $(document).ready(function () {
             dataType: 'json',
             success: function (res) {
                 console.log(res)
-                list.css({
-                    opacity: '0.5'
-                })
-                span.append(
-                    `
-                        <img src="/images/crossout.png" class="crossout" style="width: 100%; display: block;" />
-                    `
-                )
+                if (res.success) {
+                    list.css({
+                        opacity: '0.5'
+                    })
+                    span.append(
+                        `
+                            <img src="/images/crossout.png" class="crossout" style="width: 100%; display: block;" />
+                        `
+                    )
+                } else if (!res.success) {
+                    Toastify({
+                        text: res.message,
+                        duration: 3000,
+                        stopOnFocus: true,
+                        position: "center",
+                        style: {
+                            background: "red",
+                            borderRadius: "10px",
+                        },
+                        offset: {
+                            y: 30
+                        },
+                    }).showToast();
+                }
+            },
+            error: function (xhr, status, err) {
+                console.error(status, err)
+                Toastify({
+                    text: "Error while updaing",
+                    duration: 3000,
+                    stopOnFocus: true,
+                    position: "center",
+                    style: {
+                        background: "red",
+                        borderRadius: "10px",
+                    },
+                    offset: {
+                        y: 30
+                    },
+                }).showToast();
             }
         })
     })
@@ -133,31 +207,66 @@ $(document).ready(function () {
     $('#list').on('dblclick', '.deletetab', function () {
         let list = $(this).closest('.list');
         let rowId = list.attr('id')
+        if (!rowId) return
+        $('#loader').show()
         $.ajax({
             method: 'DELETE',
             url: 'actions/delete.php?id=' + rowId,
             dataType: 'json',
             success: function (res) {
+                if (res.success) {
+                    Toastify({
+                        text: res.message,
+                        duration: 3000,
+                        stopOnFocus: true,
+                        position: "right",
+                        style: {
+                            borderRadius: "10px",
+                        },
+                        offset: {
+                            y: 30
+                        },
+                    }).showToast();
+
+                    $('#loader').hide()
+                    list.remove();
+                } else if (!res.success) {
+                    Toastify({
+                        text: res.message,
+                        duration: 3000,
+                        stopOnFocus: true,
+                        position: "right",
+                        style: {
+                            background: "red",
+                            borderRadius: "10px",
+                        },
+                        offset: {
+                            y: 30
+                        },
+                    }).showToast();
+                    $('#loader').hide()
+                }
+            },
+            error: function (xhr, status, err) {
+                console.error(status, err)
                 Toastify({
-                    text: res.message,
+                    text: 'Error while deleting',
                     duration: 3000,
                     stopOnFocus: true,
-                    position: "right",
+                    position: 'center',
                     style: {
-                        borderRadius: "10px",
+                        background: 'red',
+                        borderRadius: '10px',
                     },
-                    offset: {
-                        y: 30
-                    },
+                    offset: { y: 30 },
                 }).showToast();
-
-                list.remove();
             }
         })
     });
 
     $('#list').on('dblclick', 'span', function () {
         let spanValue = $(this).text();
+        if (!spanValue) return
         $(this).html(
             `
                 <input type="text" class="editDescription" value=${spanValue} />
@@ -169,8 +278,14 @@ $(document).ready(function () {
     $('#list').on('click', '.saveBtn', function () {
         let row = $(this).closest('.list')
         let rowId = row.attr('id')
+        if (!rowId) {
+            return
+        }
         let inputVal = row.find('.editDescription').val()
         row.find('span').html(inputVal)
+        $(this).attr('disabled', true).html(
+            $('#loader').show()
+        );
 
         $.ajax({
             method: 'POST',
@@ -181,67 +296,153 @@ $(document).ready(function () {
             dataType: 'json',
             success: function (res) {
                 console.log(res)
+                if (res.success) {
+                    Toastify({
+                        text: res.message,
+                        duration: 3000,
+                        stopOnFocus: true,
+                        position: "right",
+                        style: {
+                            borderRadius: "10px",
+                        },
+                        offset: {
+                            y: 30
+                        },
+                    }).showToast();
+                    $(this).attr('disabled', false).html(
+                        `<button class="saveBtn">Save</button>`
+                    );
+                } else if (!res.success) {
+                    Toastify({
+                        text: res.message,
+                        duration: 3000,
+                        stopOnFocus: true,
+                        position: "right",
+                        style: {
+                            background: "red",
+                            borderRadius: "10px",
+                        },
+                        offset: {
+                            y: 30
+                        },
+                    }).showToast();
+                    $(this).attr('disabled', false).html(
+                        `<button class="saveBtn">Save</button>`
+                    );
+                }
+            },
+            error: function (xhr, status, err) {
+                console.error(status, err)
                 Toastify({
-                    text: res.message,
+                    text: 'Error while updating...',
                     duration: 3000,
                     stopOnFocus: true,
-                    position: "right",
+                    position: 'center',
                     style: {
-                        borderRadius: "10px",
+                        background: 'red',
+                        borderRadius: '10px',
                     },
-                    offset: {
-                        y: 30
-                    },
+                    offset: { y: 30 },
                 }).showToast();
             }
         })
     })
 
-    $('#list').on('dragover', function (e) {
-        e.preventDefault()
-        let elem = e.target
-        if ($(elem).hasClass('list')) {
-            let html = $('<div class="drag-indicator"></div>');
-            html.css({
-                border: '2px dashed skyblue',
-                margin: '5px 0',
-                height: '5px',
-                backgroundColor: 'transparent',
-            });
+    // $('#list').on('dragover', function (e) {
+    //     e.preventDefault()
+    //     let elem = e.target
+    //     if ($(elem).hasClass('list')) {
+    //         let html = $('<div class="drag-indicator"></div>');
+    //         html.css({
+    //             border: '2px dashed skyblue',
+    //             margin: '5px 0',
+    //             height: '5px',
+    //             backgroundColor: 'transparent',
+    //         });
 
-            if (!$(elem).next().hasClass('drag-indicator')) {
-                $(elem).after(html);
-            }
-        }
-    })
+    //         if (!$(elem).next().hasClass('drag-indicator')) {
+    //             $(elem).after(html);
+    //         }
+    //     }
+    // })
 
-    $("#list").on('dragleave', function (e) {
-        e.preventDefault()
-        $('.drag-indicator').remove()
-    })
+    // $("#list").on('dragleave', function (e) {
+    //     e.preventDefault()
+    //     $('.drag-indicator').remove()
+    // })
 
-    $('#list').on('drop', function (e) {
-        e.preventDefault()
-        let dropEl = $(e.target);
+    // $('#list').on('drop', function (e) {
+    //     e.preventDefault();
+    //     let dropEl = $(e.target);
 
-        if (!dropEl.hasClass('list')) {
-            return
-        }
+    //     if (!dropEl.hasClass('list')) {
+    //         return;
+    //     }
 
-        let draggedId = e.originalEvent.dataTransfer.getData('text/plain');
-        let draggedItem = $("#" + draggedId);
+    //     let draggedId = e.originalEvent.dataTransfer.getData('text/plain');
+    //     if (!draggedId) return;
+    //     let draggedItem = $("#" + draggedId);
 
-        dropEl.after(draggedItem)
-        $('.drag-indicator').remove()
-    })
+    //     // Get the new position of the item in the list
+    //     let newPosition = getPositionInList(draggedItem);
 
-    $('#list').on('dragstart', '.list', function (e) {
-        let draggedId = $(this).attr('id');
-        e.originalEvent.dataTransfer.setData('text/plain', draggedId);
-    });
+    //     $.ajax({
+    //         method: 'POST',
+    //         url: 'actions/update.php?id=' + draggedId,
+    //         dataType: 'json',
+    //         data: {
+    //             id: draggedId,
+    //             itemPosition: newPosition
+    //         },
+    //         success: function (res) {
+    //             if (res.success) {
+    //                 Toastify({
+    //                     text: res.message,
+    //                     duration: 3000,
+    //                     stopOnFocus: true,
+    //                     position: "right",
+    //                     style: {
+    //                         borderRadius: "10px",
+    //                     },
+    //                     offset: {
+    //                         y: 30
+    //                     },
+    //                 }).showToast();
+    //                 dropEl.after(draggedItem);
+    //             } else if (!res.success) {
+    //                 Toastify({
+    //                     text: res.message,
+    //                     duration: 3000,
+    //                     stopOnFocus: true,
+    //                     position: "right",
+    //                     style: {
+    //                         background: "red",
+    //                         borderRadius: "10px",
+    //                     },
+    //                     offset: {
+    //                         y: 30
+    //                     },
+    //                 }).showToast();
+    //             }
+    //         }
+    //     })
+    //     $('.drag-indicator').remove();
+    // });
+
+    // get the position of the item in the list
+    // function getPositionInList(draggedItem) {
+    //     let listItems = $('#list .list');
+    //     return listItems.index(draggedItem) + 1;
+    // }
+
+    // $('#list').on('dragstart', '.list', function (e) {
+    //     let draggedId = $(this).attr('id');
+    //     e.originalEvent.dataTransfer.setData('text/plain', draggedId);
+    // });
 
     $('#list').on('click', '.colortab', function () {
         let rowId = $(this).closest('.list').attr('id')
+        if (!rowId) return;
         if ($(this).find('.colorpicker').length == 0) {
             let colorPicker = $('<input class="colorpicker" type="color" />')
             $(this).append(colorPicker)
@@ -266,11 +467,54 @@ $(document).ready(function () {
                     dataType: 'json',
                     success: function (res) {
                         console.log(res)
+                        if (res.success) {
+                            Toastify({
+                                text: res.message,
+                                duration: 3000,
+                                stopOnFocus: true,
+                                position: "center",
+                                style: {
+                                    borderRadius: "10px",
+                                },
+                                offset: {
+                                    y: 30
+                                },
+                            }).showToast();
+
+                            $('.colorpicker').remove();
+
+                        } else if (!res.success) {
+                            Toastify({
+                                text: res.message,
+                                duration: 3000,
+                                stopOnFocus: true,
+                                position: "center",
+                                style: {
+                                    background: "red",
+                                    borderRadius: "10px",
+                                },
+                                offset: {
+                                    y: 30
+                                },
+                            }).showToast();
+                        }
+                    },
+                    error: function (xhr, status, err) {
+                        console.error(status, err)
+                        Toastify({
+                            text: 'Error updating color',
+                            duration: 3000,
+                            stopOnFocus: true,
+                            position: 'center',
+                            style: {
+                                background: 'red',
+                                borderRadius: '10px',
+                            },
+                            offset: { y: 30 },
+                        }).showToast();
                     }
                 })
-                $(this).remove();
             });
         }
     })
-
 })
