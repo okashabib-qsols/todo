@@ -17,7 +17,7 @@ $(document).ready(function () {
                     }
                     $('#list').append(
                         `
-                            <li color=${item.color} class="${item.color == 1 ? 'colorBlue' : item.color} list" rel=${ind} id=${item.id} style="${item.isDone == 1 ? "opacity: 0.5;" : ""}">
+                            <li color=${item.color} class="${item.color == 1 ? 'colorBlue' : item.color} list" rel=${ind} id="todo_${item.id}" style="${item.isDone == 1 ? "opacity: 0.5;" : ""}">
                                 <span id="${item.id}listitem" title="Double-click to edit..." style="background-color: ${item.color != 1 ? item.color : ""}">${item.description} ${crossOutImg}</span>
                                 <div class="draggertab tab"></div>
                                 <div class="colortab tab"></div>
@@ -44,9 +44,50 @@ $(document).ready(function () {
     $("#list").sortable({
         axis: 'y',
         update: function (e, ui) {
+            console.log($(e.target), ui.items)
 
-            var data = $(this).sortable('serialize');
-            console.log("Serialized Data: ", data);
+            var data = $(this).sortable('toArray', {
+                attribute: 'id'
+            });
+            if (!data) return;
+            $.ajax({
+                method: "POST",
+                url: "actions/updateposition.php",
+                dataType: "json",
+                data: {
+                    itemPosition: data.join(',')
+                },
+                success: function (response) {
+                    if (response.success) {
+                        Toastify({
+                            text: response.message,
+                            duration: 3000,
+                            stopOnFocus: true,
+                            position: "right",
+                            style: {
+                                borderRadius: "10px",
+                            },
+                            offset: {
+                                y: 30
+                            },
+                        }).showToast();
+                    } else if (!response.success) {
+                        Toastify({
+                            text: response.message,
+                            duration: 3000,
+                            stopOnFocus: true,
+                            position: "right",
+                            style: {
+                                background: "red",
+                                borderRadius: "10px",
+                            },
+                            offset: {
+                                y: 30
+                            },
+                        }).showToast();
+                    }
+                }
+            });
         }
     });
 
@@ -67,7 +108,7 @@ $(document).ready(function () {
                         text: response.message,
                         duration: 3000,
                         stopOnFocus: true,
-                        position: "center",
+                        position: "right",
                         style: {
                             borderRadius: "10px",
                         },
@@ -115,7 +156,7 @@ $(document).ready(function () {
                     text: "Error while adding",
                     duration: 3000,
                     stopOnFocus: true,
-                    position: "center",
+                    position: "right",
                     style: {
                         background: "red",
                         borderRadius: "10px",
@@ -174,7 +215,7 @@ $(document).ready(function () {
                         text: res.message,
                         duration: 3000,
                         stopOnFocus: true,
-                        position: "center",
+                        position: "right",
                         style: {
                             background: "red",
                             borderRadius: "10px",
@@ -191,7 +232,7 @@ $(document).ready(function () {
                     text: "Error while updaing",
                     duration: 3000,
                     stopOnFocus: true,
-                    position: "center",
+                    position: "right",
                     style: {
                         background: "red",
                         borderRadius: "10px",
@@ -253,7 +294,7 @@ $(document).ready(function () {
                     text: 'Error while deleting',
                     duration: 3000,
                     stopOnFocus: true,
-                    position: 'center',
+                    position: 'right',
                     style: {
                         background: 'red',
                         borderRadius: '10px',
@@ -337,7 +378,7 @@ $(document).ready(function () {
                     text: 'Error while updating...',
                     duration: 3000,
                     stopOnFocus: true,
-                    position: 'center',
+                    position: 'right',
                     style: {
                         background: 'red',
                         borderRadius: '10px',
@@ -472,7 +513,7 @@ $(document).ready(function () {
                                 text: res.message,
                                 duration: 3000,
                                 stopOnFocus: true,
-                                position: "center",
+                                position: "right",
                                 style: {
                                     borderRadius: "10px",
                                 },
@@ -488,7 +529,7 @@ $(document).ready(function () {
                                 text: res.message,
                                 duration: 3000,
                                 stopOnFocus: true,
-                                position: "center",
+                                position: "right",
                                 style: {
                                     background: "red",
                                     borderRadius: "10px",
@@ -505,7 +546,7 @@ $(document).ready(function () {
                             text: 'Error updating color',
                             duration: 3000,
                             stopOnFocus: true,
-                            position: 'center',
+                            position: 'right',
                             style: {
                                 background: 'red',
                                 borderRadius: '10px',

@@ -17,16 +17,6 @@ if (mysqli_num_rows($id_check_query) > 0) {
         $color = $_POST['color'];
         $update_fields[] = "color='$color'";
     }
-    if (isset($_POST['itemPosition'])) {
-        $ItemPosition = $_POST['itemPosition'];
-
-        // $select_position = $conn->query('SELECT ItemPosition FROM list');
-        // while($row = $select_position->fetch_assoc()){
-        
-        // }
-
-        $update_fields[] = "ItemPosition='$ItemPosition'";
-    }
 
     $update = $conn->query("UPDATE list SET " . implode(", ", $update_fields) . " WHERE id='$id'");
     if ($update) {
